@@ -1,0 +1,131 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+
+<title>JS Latency Estimation</title>
+<meta name="author" content="Graspable, Inc.">
+
+<style>
+div#container {
+	margin-top: 100px;
+	width: 100%;
+}
+div#track {
+	max-width: 400px;
+	width: 75%;
+	margin: auto;
+	border-style: solid;
+	border-color: black;
+	box-sizing: border-box;
+	/*border-radius: 50%;*/
+}
+div.pacer {
+	position: absolute;
+	background-color: skyblue;
+	/*border-radius: 50%;*/
+}
+</style>
+</head>
+
+<body>
+
+<div id="container">
+	<div id="track"></div>
+</div>
+
+<script>
+
+function px(str) { return str + 'px'; }
+
+var container = document.querySelector('#container');
+
+var track = document.querySelector('#track')
+  , t_dims = track.getBoundingClientRect();
+t_dims.height = t_dims.width;
+var track_settings = { 'border-width': Math.max(t_dims.width/10, 15) };
+
+track.style.height = px(t_dims.width);
+track.style['border-width'] = px(track_settings['border-width']);
+
+var radius = t_dims.width/2
+  , center = [t_dims.left + radius - track_settings['border-width']/2, t_dims.top + radius - track_settings['border-width']/2];
+var rotations_per_second = 0.25;
+
+// Remove the "border-radius" styling from the #track and .pacer selectors and
+// call `coordinateDemo` to show pacers on all corners, sides, and center of the
+// track div.
+coordinateDemo();
+
+// Add the "border-radius" styling to the #track and .pacer selectors and call
+// `coordinateDemo2` to show pacers on the circle that have been positioned with
+// angles.
+// coordinateDemo2();
+
+// Use these lines to animate a pacer moving around the track.
+// var pacer = createPacer();
+// window.requestAnimationFrame(step);
+
+function setPosOfPacer(pacer, radians) {
+	var pos = getPositionOnTrack(radians, track_settings['border-width']);
+	pacer.style.left = px(pos[0]);
+	pacer.style.top = px(pos[1]);
+}
+
+function step(timestamp) {
+	var seconds_elapsed = timestamp/1000;
+	theta = 2*Math.PI*rotations_per_second*seconds_elapsed;
+	setPosOfPacer(pacer, theta);
+	window.requestAnimationFrame(step);
+}
+
+function getPositionOnTrack(radians, pacer_size) {
+	var pos = getRadialPos(center, radius, radians);
+	return [ pos[0] - pacer_size/2*Math.cos(radians)
+	       , pos[1] - pacer_size/2*Math.sin(radians) ];
+}
+function getRadialPos(center, radius, radians) {
+	return [ center[0] + radius*Math.cos(radians)
+	       , center[1] + radius*Math.sin(radians) ];
+}
+
+function createPacer(pos) {
+	var pacer = document.createElement('div');
+	pacer.className = 'pacer';
+	pacer.style.width = px(track_settings['border-width']);
+	pacer.style.height = px(track_settings['border-width']);
+	if (pos) {
+		pacer.style.left = px(pos[0]);
+		pacer.style.top = px(pos[1]);
+	}
+	document.body.appendChild(pacer);
+	return pacer;
+}
+
+function coordinateDemo() {
+	// corners
+	createPacer([t_dims.left, t_dims.top]);
+	createPacer([t_dims.left+t_dims.width-track_settings['border-width'], t_dims.top]);
+	createPacer([t_dims.left, t_dims.top+t_dims.width-track_settings['border-width']]);
+	createPacer([t_dims.left+t_dims.width-track_settings['border-width'], t_dims.top+t_dims.width-track_settings['border-width']]);
+
+	// sides
+	createPacer([t_dims.left+t_dims.width/2-track_settings['border-width']/2, t_dims.top]);
+	createPacer([t_dims.left+t_dims.width-track_settings['border-width'], t_dims.top+t_dims.width/2-track_settings['border-width']/2]);
+	createPacer([t_dims.left+t_dims.width/2-track_settings['border-width']/2, t_dims.top+t_dims.width-track_settings['border-width']]);
+	createPacer([t_dims.left, t_dims.top+t_dims.width/2-track_settings['border-width']/2]);
+
+	// center
+	createPacer([t_dims.left+t_dims.width/2-track_settings['border-width']/2, t_dims.top+t_dims.width/2-track_settings['border-width']/2]);
+}
+
+function coordinateDemo2() {
+	createPacer(getPositionOnTrack(0, track_settings['border-width']));
+	createPacer(getPositionOnTrack(Math.PI/2, track_settings['border-width']));
+	createPacer(getPositionOnTrack(Math.PI, track_settings['border-width']));
+	createPacer(getPositionOnTrack(3*Math.PI/2, track_settings['border-width']));
+}
+</script>
+</body>
+</html>
