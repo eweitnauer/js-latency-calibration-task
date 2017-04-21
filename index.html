@@ -8,16 +8,17 @@
 <meta name="author" content="Graspable, Inc.">
 
 <link rel="stylesheet" href="styles.css">
-
 </head>
 
 <body>
-
 <div id="container">
 	<div id="track"></div>
 </div>
 
 <script>
+
+var mouse_points = []
+  , pacer_points = [];
 
 function px(str) { return str + 'px'; }
 
@@ -40,15 +41,15 @@ var radius = t_dims.width/2
   , center = [t_dims.left + radius, t_dims.top + radius];
 var rotations_per_second = 0.25;
 
-var pacer = createPacer(getPositionOnTrack(0));
 document.addEventListener("mousemove", function(event) {
 	var radians = Math.atan2(event.pageY-center[1], event.pageX-center[0]);
-	setPosOfPacer(pacer, radians);
+	mouse_points.push([performance.now(), radians]);
+	// setPosOfPacer(pacer, radians);
 });
 
 // Use these lines to animate a pacer moving around the track.
-// var pacer = createPacer(getPositionOnTrack(0));
-// window.requestAnimationFrame(step);
+var pacer = createPacer(getPositionOnTrack(0));
+window.requestAnimationFrame(step);
 
 function setPosOfPacer(pacer, radians) {
 	var pos = getPositionOnTrack(radians);
@@ -56,13 +57,16 @@ function setPosOfPacer(pacer, radians) {
 	pacer.style.top = px(pos[1]);
 }
 
+// Function to pass as the callback to window.requestAnimationFrame.
 function step(timestamp) {
 	var seconds_elapsed = timestamp/1000;
 	theta = 2*Math.PI*rotations_per_second*seconds_elapsed;
+	pacer_points.push([timestamp, theta]);
 	setPosOfPacer(pacer, theta);
 	window.requestAnimationFrame(step);
 }
 
+// Corrects for the pacer's origin being at the top-left corner of a square div.
 function getPositionOnTrack(radians) {
 	var pos = getRadialPos(center, radius, radians);
 	return [ pos[0] - pacer_r
