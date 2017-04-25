@@ -7,14 +7,20 @@
 <title>JS Latency Estimation</title>
 <meta name="author" content="Graspable, Inc.">
 
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="track-and-pacer.css">
+<link rel="stylesheet" href="scatterplot.css">
+
+<script src="https://d3js.org/d3.v3.min.js"></script>
 <script src="analyze.js"></script>
+<script src="plot.js"></script>
 </head>
 
 <body>
 <div id="container">
 	<div id="track"></div>
 </div>
+
+<button onclick="start()">Start</button>
 
 <script>
 
@@ -40,19 +46,23 @@ track.style['border-width'] = px(settings['border-width']);
 // The width of the track includes the width of the border.
 var radius = t_dims.width/2
   , center = [t_dims.left + radius, t_dims.top + radius];
+
+var pacer;
+var collect = false;
+var stop_animation = false;
 var rotations_per_second = 0.25;
 
-var pacer = createPacer(getPositionOnTrack(0));
+// pacer = createPacer(getPositionOnTrack(0));
 document.addEventListener("mousemove", function(event) {
 	var radians = Math.atan2(event.pageY-center[1], event.pageX-center[0]);
 	radians = (radians + 2*Math.PI) % (2*Math.PI);
-	// mouse_points.push([performance.now(), radians]);
-	console.log(radians);
-	setPosOfPacer(pacer, radians);
+	if (collect) mouse_points.push([performance.now(), radians]);
+	// console.log(radians);
+	// setPosOfPacer(pacer, radians);
 });
 
 // Use these lines to animate a pacer moving around the track.
-// var pacer = createPacer(getPositionOnTrack(0));
+// pacer = createPacer(getPositionOnTrack(0));
 // window.requestAnimationFrame(step);
 
 function setPosOfPacer(pacer, radians) {
@@ -61,14 +71,17 @@ function setPosOfPacer(pacer, radians) {
 	pacer.style.top = px(pos[1]);
 }
 
+var first_time;
 // Function to pass as the callback to window.requestAnimationFrame.
 function step(timestamp) {
 	var seconds_elapsed = timestamp/1000;
-	theta = 2*Math.PI*rotations_per_second*seconds_elapsed;
-	console.log(theta);
-	pacer_points.push([timestamp, theta]);
+	if (!first_time) first_time = seconds_elapsed;
+	theta = 2*Math.PI*rotations_per_second*(seconds_elapsed - first_time);
+	if (theta >= 2*Math.PI) theta = theta % (2*Math.PI);
+	if (theta > Math.PI/2 && !collect) collect = true;
+	if (collect) pacer_points.push([timestamp, theta]);
 	setPosOfPacer(pacer, theta);
-	window.requestAnimationFrame(step);
+	if (!stop_animation) window.requestAnimationFrame(step);
 }
 
 // Corrects for the pacer's origin being at the top-left corner of a square div.
@@ -87,6 +100,7 @@ function getRadialPos(center, radius, radians) {
 // Pacers are appended to the body of the document and positioned absolutely.
 function createPacer(pos) {
 	var pacer = document.createElement('div');
+	pacer.id = 'pacer';
 	pacer.className = 'pacer';
 	pacer.style.width = px(2*pacer_r);
 	pacer.style.height = px(2*pacer_r);
@@ -94,6 +108,35 @@ function createPacer(pos) {
 	pacer.style.top = px(pos[1]);
 	document.body.appendChild(pacer);
 	return pacer;
+}
+
+pacer = createPacer(getPositionOnTrack(0));
+function start() {
+	setTimeout(function() {
+		window.requestAnimationFrame(step);
+	}, 3000);
+	setTimeout(function() {
+		collect = false;
+		stop_animation = true;
+		removeTrackAndPacer();
+		pacer_points = reduceSetWithinBounds(pacer_points, Math.PI/8, 7*Math.PI/8);
+		mouse_points = reduceSetWithinBounds(mouse_points, Math.PI/8, 7*Math.PI/8);
+		plot_helper();
+		displayArea('pacer', getTotalArea(pacer_points));
+		displayArea('mouse', getTotalArea(mouse_points));
+	}, 20000);
+}
+
+function plot_helper() {
+	plotSets({ type: 'pacer', data: pacer_points }
+		      ,{ type: 'mouse', data: mouse_points });
+}
+
+function removeTrackAndPacer() {
+	var container = document.getElementById('container');
+	container.parentElement.removeChild(container);
+	var pacer = document.getElementById('pacer');
+	pacer.parentElement.removeChild(pacer);
 }
 
 function coordinateDemo() {
