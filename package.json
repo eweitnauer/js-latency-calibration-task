@@ -1,0 +1,11 @@
+{
+  "name": "js-latency-estimation",
+  "version": "1.0.0",
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-es2015": "^6.9.0"
+  },
+  "scripts": {
+    "build": "babel src --out-file js-latency-estimation.js --presets es2015"
+  }
+}

@@ -1,0 +1,32 @@
+div#container {
+	margin-top: 100px;
+	width: 100%;
+	-webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+div#track {
+	max-width: 400px;
+	width: 75%;
+	margin: auto;
+	border-style: solid;
+	border-color: black;
+	box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	border-radius: 50%;
+	-webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+div.pacer {
+	position: absolute;
+	background-color: skyblue;
+	border-radius: 50%;
+	-webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
