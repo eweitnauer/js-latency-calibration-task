@@ -8,153 +8,157 @@
 <meta name="author" content="Graspable, Inc.">
 
 <link rel="stylesheet" href="track-and-pacer.css">
-<link rel="stylesheet" href="scatterplot.css">
+
+<script src="analyze.js"></script>
 
 <script src="https://d3js.org/d3.v3.min.js"></script>
-<script src="analyze.js"></script>
 <script src="plot.js"></script>
+<link rel="stylesheet" href="scatterplot.css">
 </head>
 
 <body>
 <div id="container">
 	<div id="track"></div>
 </div>
-
 <button onclick="start()">Start</button>
 
 <script>
 
-var mouse_points = []
-  , pacer_points = [];
+// Data collected is in the form [performance time (ms), position on track (rad)]
+let mouse_data = []
+  , pacer_data = [];
 
-function px(str) { return str + 'px'; }
+let settings = { 'border-w': 1
+               , 'pacer-r': 40
+               , 'rot-per-sec': 0.25 };
 
-var container = document.querySelector('#container');
+let track = initTrack(); // position and radius
+let pacer = createPacer(getPositionOnTrack(track, 0)); // DOM element
 
-var track = document.querySelector('#track')
-  , t_dims = track.getBoundingClientRect();
+let collect = false;
+let stop_animation = false;
 
-var settings = { 'border-width': 1//Math.max(t_dims.width/10, 15)
-               , 'pacer-size': 80 };
-var pacer_r = (settings['border-width'] * settings['pacer-size'])/2;
-
-// The width of the track is a percentage of the page width. The height in the
-// t_dims object will not accurately represent the height of the track.
-track.style.height = px(t_dims.width);
-track.style['border-width'] = px(settings['border-width']);
-
-// The width of the track includes the width of the border.
-var radius = t_dims.width/2
-  , center = [t_dims.left + radius, t_dims.top + radius];
-
-var pacer;
-var collect = false;
-var stop_animation = false;
-var rotations_per_second = 0.25;
-
-// pacer = createPacer(getPositionOnTrack(0));
 document.addEventListener("mousemove", function(event) {
-	var radians = Math.atan2(event.pageY-center[1], event.pageX-center[0]);
-	radians = (radians + 2*Math.PI) % (2*Math.PI);
-	if (collect) mouse_points.push([performance.now(), radians]);
-	// console.log(radians);
-	// setPosOfPacer(pacer, radians);
+	let radians = Math.atan2(event.pageY-track.center[1], event.pageX-track.center[0]);
+	radians = (radians + 2*Math.PI) % (2*Math.PI); // converts from -π,π to 0,2π
+	if (collect) mouse_data.push([performance.now(), radians]);
 });
 
-// Use these lines to animate a pacer moving around the track.
-// pacer = createPacer(getPositionOnTrack(0));
-// window.requestAnimationFrame(step);
+function start() {
+	setTimeout(function() {	window.requestAnimationFrame(step); }, 1000);
+	setTimeout(stop, 12000);
+}
 
-function setPosOfPacer(pacer, radians) {
-	var pos = getPositionOnTrack(radians);
+// Stops the animation. Removes the track and pacer from the page.
+// Adjusts data and analyzes lag. Plots data w/ d3.
+function stop() {
+	collect = false;
+	stop_animation = true;
+	removeTrackAndPacer();
+
+	mouse_data = alignWithPacer(mouse_data, pacer_data);
+	let t_start = mouse_data[0][0]
+	  , t_end = mouse_data[mouse_data.length-1][0];
+	pacer_data = alignStartAndEnd(pacer_data, t_start, t_end);
+
+	plotSets({ type: 'pacer', data: pacer_data }
+		      ,{ type: 'mouse', data: mouse_data });
+
+	let p_area = getTotalArea(pacer_data)
+	  , m_area = getTotalArea(mouse_data);
+	displayValue('pacer area', p_area);
+	displayValue('mouse area', m_area);
+	displayValue('delta area', p_area-m_area);
+
+	let avg_d_angle = (p_area-m_area)/(t_end-t_start);
+	displayValue('avg. angle delta', avg_d_angle);
+	displayValue('avg. lag in ms', (avg_d_angle / (settings['rot-per-sec']*Math.PI*2) * 1000).toFixed(1));
+}
+
+function setPosOfPacer(pacer, track, radians) {
+	let pos = getPositionOnTrack(track, radians);
 	pacer.style.left = px(pos[0]);
 	pacer.style.top = px(pos[1]);
 }
 
-var first_time;
-// Function to pass as the callback to window.requestAnimationFrame.
-function step(timestamp) {
-	if (stop_animation) return;
-	var seconds_elapsed = timestamp/1000;
-	if (!first_time) first_time = seconds_elapsed;
-	theta = 2*Math.PI*rotations_per_second*(seconds_elapsed - first_time);
-	//if (theta >= 2*Math.PI) theta = theta % (2*Math.PI);
-	//if (theta > Math.PI/2 && !collect) collect = true;
-	if (theta > Math.PI/2) collect = true;
-	if (collect) pacer_points.push([timestamp, theta]);
-	setPosOfPacer(pacer, theta);
-	window.requestAnimationFrame(step);
-}
-
 // Corrects for the pacer's origin being at the top-left corner of a square div.
-function getPositionOnTrack(radians) {
-	var pos = getRadialPos(center, radius, radians);
-	return [ pos[0] - pacer_r
-	       , pos[1] - pacer_r ];
+function getPositionOnTrack(track, radians) {
+	let pos = getRadialPos(track.center, track.radius, radians);
+	return [ pos[0] - settings['pacer-r']
+	       , pos[1] - settings['pacer-r'] ];
 }
 
 // The position returned will be midway through the track border.
 function getRadialPos(center, radius, radians) {
-	return [ center[0] + (radius-settings['border-width']/2)*Math.cos(radians)
-	       , center[1] + (radius-settings['border-width']/2)*Math.sin(radians) ];
+	return [ center[0] + (radius-settings['border-w']/2)*Math.cos(radians)
+	       , center[1] + (radius-settings['border-w']/2)*Math.sin(radians) ];
+}
+
+// The timestamp sent to the requestAnimationFrame callback is the perfomance
+// time on the page. Subtract the timestamp sent to the first call to "step"
+// so the pacer does not jump when the animation starts.
+let start_t;
+// Function to pass as the callback to window.requestAnimationFrame.
+function step(timestamp) {
+	if (stop_animation) return;
+	let seconds_elapsed = timestamp/1000;
+	if (!start_t) start_t = seconds_elapsed;
+	theta = 2*Math.PI*settings['rot-per-sec']*(seconds_elapsed - start_t);
+	// Do not collect data from the first corner-turn of the pacer. This is so
+	// the user has time to react to the motion and start following.
+	if (theta > Math.PI/2) collect = true;
+	if (collect) pacer_data.push([timestamp, theta]);
+
+	setPosOfPacer(pacer, track, theta);
+
+	window.requestAnimationFrame(step);
+}
+
+function removeTrackAndPacer() {
+	let container = document.getElementById('container');
+	container.parentElement.removeChild(container);
+	let pacer = document.getElementById('pacer');
+	pacer.parentElement.removeChild(pacer);
+}
+
+function coordinateDemo() {
+	createPacer(getPositionOnTrack(track, 0));
+	createPacer(getPositionOnTrack(track, Math.PI/2));
+	createPacer(getPositionOnTrack(track, Math.PI));
+	createPacer(getPositionOnTrack(track, 3*Math.PI/2));
+}
+
+// There must be a div with the "track" id on the page, and that div should
+// have the correct width and position set. Returns the radius and absolute
+// position of the track's center. The radius includes the width of the border.
+function initTrack() {
+	let track_div = document.getElementById('track');
+	let track_dims = track_div.getBoundingClientRect();
+	// The width of the track is a percentage of the page width. The height in the
+	// track_dims object will not accurately represent the height of the track.
+	track_div.style.height = px(track_dims.width);
+	track_div.style['border-w'] = px(settings['border-w']);
+	// The width of the track includes the width of the border.
+	let radius = track_dims.width/2
+	  , center = [track_dims.left + radius, track_dims.top + radius];
+	return { radius, center };
 }
 
 // Pacers are appended to the body of the document and positioned absolutely.
 function createPacer(pos) {
-	var pacer = document.createElement('div');
+	let pacer = document.createElement('div');
 	pacer.id = 'pacer';
 	pacer.className = 'pacer';
-	pacer.style.width = px(2*pacer_r);
-	pacer.style.height = px(2*pacer_r);
+	pacer.style.width = px(2*settings['pacer-r']);
+	pacer.style.height = px(2*settings['pacer-r']);
 	pacer.style.left = px(pos[0]);
 	pacer.style.top = px(pos[1]);
 	document.body.appendChild(pacer);
 	return pacer;
 }
 
-pacer = createPacer(getPositionOnTrack(0));
-function start() {
-	setTimeout(function() {
-		window.requestAnimationFrame(step);
-	}, 1000);
-	setTimeout(function() {
-		collect = false;
-		stop_animation = true;
-		removeTrackAndPacer();
-		mouse_points = alignWithPacer(mouse_points, pacer_points);
-		let t_start = mouse_points[0][0]
-		  , t_end = mouse_points[mouse_points.length-1][0];
-		pacer_points = alignStartAndEnd(pacer_points, t_start, t_end);
-		plot_helper();
-		let p_area = getTotalArea(pacer_points);
-		let m_area = getTotalArea(mouse_points)
-		displayValue('pacer area', p_area);
-		displayValue('mouse area', m_area);
-		displayValue('delta area', p_area-m_area);
-		let avg_d_angle = (p_area-m_area)/(t_end-t_start);
-		displayValue('avg. angle delta', avg_d_angle);
-		displayValue('avg. lag in ms', (avg_d_angle / (rotations_per_second*Math.PI*2) * 1000).toFixed(1));
-	}, 12000);
-}
+function px(str) { return str + 'px'; }
 
-function plot_helper() {
-	plotSets({ type: 'pacer', data: pacer_points }
-		      ,{ type: 'mouse', data: mouse_points });
-}
-
-function removeTrackAndPacer() {
-	var container = document.getElementById('container');
-	container.parentElement.removeChild(container);
-	var pacer = document.getElementById('pacer');
-	pacer.parentElement.removeChild(pacer);
-}
-
-function coordinateDemo() {
-	createPacer(getPositionOnTrack(0));
-	createPacer(getPositionOnTrack(Math.PI/2));
-	createPacer(getPositionOnTrack(Math.PI));
-	createPacer(getPositionOnTrack(3*Math.PI/2));
-}
 </script>
 </body>
 </html>
