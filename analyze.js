@@ -21,8 +21,8 @@ function reduceSetWithinBounds(set, min_dependent, max_dependent) {
 	});
 }
 
-function displayArea(type, area) {
+function displayValue(text, value) {
 	var p = document.createElement('p');
-	p.innerHTML = type + ' area: ' + area;
+	p.innerHTML = text + ': ' + value;
 	document.body.appendChild(p);
 }

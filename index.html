@@ -34,9 +34,9 @@ var container = document.querySelector('#container');
 var track = document.querySelector('#track')
   , t_dims = track.getBoundingClientRect();
 
-var settings = { 'border-width': Math.max(t_dims.width/10, 15)
-               , 'pacer-scale-factor': 1 };
-var pacer_r = (settings['border-width'] * settings['pacer-scale-factor'])/2;
+var settings = { 'border-width': 1//Math.max(t_dims.width/10, 15)
+               , 'pacer-size': 80 };
+var pacer_r = (settings['border-width'] * settings['pacer-size'])/2;
 
 // The width of the track is a percentage of the page width. The height in the
 // t_dims object will not accurately represent the height of the track.
@@ -74,14 +74,16 @@ function setPosOfPacer(pacer, radians) {
 var first_time;
 // Function to pass as the callback to window.requestAnimationFrame.
 function step(timestamp) {
+	if (stop_animation) return;
 	var seconds_elapsed = timestamp/1000;
 	if (!first_time) first_time = seconds_elapsed;
 	theta = 2*Math.PI*rotations_per_second*(seconds_elapsed - first_time);
-	if (theta >= 2*Math.PI) theta = theta % (2*Math.PI);
-	if (theta > Math.PI/2 && !collect) collect = true;
+	//if (theta >= 2*Math.PI) theta = theta % (2*Math.PI);
+	//if (theta > Math.PI/2 && !collect) collect = true;
+	if (theta > Math.PI/2) collect = true;
 	if (collect) pacer_points.push([timestamp, theta]);
 	setPosOfPacer(pacer, theta);
-	if (!stop_animation) window.requestAnimationFrame(step);
+	window.requestAnimationFrame(step);
 }
 
 // Corrects for the pacer's origin being at the top-left corner of a square div.
@@ -114,17 +116,25 @@ pacer = createPacer(getPositionOnTrack(0));
 function start() {
 	setTimeout(function() {
 		window.requestAnimationFrame(step);
-	}, 3000);
+	}, 1000);
 	setTimeout(function() {
 		collect = false;
 		stop_animation = true;
 		removeTrackAndPacer();
-		pacer_points = reduceSetWithinBounds(pacer_points, Math.PI/8, 7*Math.PI/8);
-		mouse_points = reduceSetWithinBounds(mouse_points, Math.PI/8, 7*Math.PI/8);
+		mouse_points = alignWithPacer(mouse_points, pacer_points);
+		let t_start = mouse_points[0][0]
+		  , t_end = mouse_points[mouse_points.length-1][0];
+		pacer_points = alignStartAndEnd(pacer_points, t_start, t_end);
 		plot_helper();
-		displayArea('pacer', getTotalArea(pacer_points));
-		displayArea('mouse', getTotalArea(mouse_points));
-	}, 20000);
+		let p_area = getTotalArea(pacer_points);
+		let m_area = getTotalArea(mouse_points)
+		displayValue('pacer area', p_area);
+		displayValue('mouse area', m_area);
+		displayValue('delta area', p_area-m_area);
+		let avg_d_angle = (p_area-m_area)/(t_end-t_start);
+		displayValue('avg. angle delta', avg_d_angle);
+		displayValue('avg. lag in ms', (avg_d_angle / (rotations_per_second*Math.PI*2) * 1000).toFixed(1));
+	}, 12000);
 }
 
 function plot_helper() {

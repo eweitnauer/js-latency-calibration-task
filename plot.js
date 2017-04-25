@@ -95,42 +95,40 @@ function plotSet(svg, x, y, color, type, data) {
       .style("fill", function(d) { return color(type); });
 }
 
-function interpolate(p1, p2) {
-  var slope = (p2[1]-p1[1])/(p2[0]-p1[0]);
-  return function(x) {
-    return (x-p1[0])*slope+p1[1];
-  }
+function alignWithPacer(mouse, pacer) {
+  var j = 0;
+  let t_start = pacer[0][0]
+    , t_end = pacer[pacer.length-1][0];
+  var mouse_cut = mouse.filter(d => d[0] >= t_start && d[0] <= t_end);
+  mouse_cut.forEach(md => {
+    while (j < pacer.length-1 && pacer[j+1][0] < md[0]) j++;
+    let target = pacer[j][1];
+    while (target - md[1] > Math.PI) md[1] += 2*Math.PI;
+  });
+  return mouse_cut;
 }
 
-// function scaleDataSets(mod, ...sets) {
-//   var curr_x = Math.min(...(sets.map(function(set) { return set[0]; })));
-//   var indeces = sets.map(function(set) { return 0; });
-// }
+function interpolate(p1, p2, t) {
+  var slope = (p2[1]-p1[1])/(p2[0]-p1[0]);
+  return (t-p1[0])*slope+p1[1];
+}
 
-// function scaleToSet(set1, set2, modulator) {
-//   var j = 0;
-//   var curr_diff = 0;
-//   for (var i=0; i<set1.length; i++) {
-//     if (j === 0 && set1[i][0] < set2[j][0]) {
-//       set1[i] = false;
-//       continue;
-//     }
-//     while (j < set2.length-1 && set1[i][0] < set2[j+1][0]) j++;
-//     if (j > set2.length-2) {
-//       set1[i] = false;
-//       continue;
-//     }
-//     set1[i][1] += curr_diff;
-//     var ceiling = interpolate(set2[j], set2[j+1])(set1[i][0]);
-//     var diff = ceiling - set1[i][1];
-//     console.log(diff);
-//     if (diff < modulator) console.log('hi', i, set1[i][1], ceiling, diff, curr_diff);
-//     while (diff > modulator) {
-//       set1[i][1] += modulator;
-//       curr_diff += modulator;
-//       diff = ceiling - set1[i][1];
-//       // if (Math.abs(diff) > modulator) console.log('hi', i, set1[i][1], ceiling, diff)
-//     }
-//   }
-//   return set1.filter(function(p) { return p; });
-// }
+/// Will change the first and last element of the set to be at the passed times
+/// using linear interpolation. Will throw away any data points that are before
+/// and after end.
+function alignStartAndEnd(set, start, end) {
+  let cut_set = set.filter(d => {
+    if (d[0] < start || d[0] > end) return false;
+    return true;
+  });
+  let N = cut_set.length;
+  if (cut_set[0][0] !== start) {
+    cut_set[0][0] = start;
+    cut_set[0][1] = interpolate(cut_set[0], cut_set[1], start);
+  }
+  if (cut_set[N-1][0] !== end) {
+    cut_set[N-1][0] = end;
+    cut_set[N-1][1] = interpolate(cut_set[N-2], cut_set[N-1], end);
+  }
+  return cut_set;
+}
