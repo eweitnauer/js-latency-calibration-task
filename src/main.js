@@ -3,13 +3,19 @@ let mouse_data = []
   , pacer_data = [];
 
 let settings = { 'border-w': 1
+               , 'spoke': true
                , 'pacer-r': 40
                , 'rot-per-sec': 0.25 };
 
-let track, pacer;
+let track, pacer, spoke;
 window.onload = function() {
+	let radians = 0;
 	track = initTrack(); // position and radius
-	pacer = createPacer(getPositionOnTrack(track, 0)); // DOM element
+	if (settings['spoke']) {
+		spoke = createSpoke(track);
+		setRotOfSpoke(spoke, radians);
+	}
+	pacer = createPacer(getPositionOnTrack(track, radians)); // DOM element
 }
 
 let collect = false;
@@ -68,6 +74,10 @@ function setPosOfPacer(pacer, track, radians) {
 	pacer.style.top = px(pos[1]);
 }
 
+function setRotOfSpoke(spoke, radians) {
+	spoke.style.transform = "rotate("+radians+"rad)";
+}
+
 // Corrects for the pacer's origin being at the top-left corner of a square div.
 function getPositionOnTrack(track, radians) {
 	let pos = getRadialPos(track.center, track.radius, radians);
@@ -97,6 +107,7 @@ function step(timestamp) {
 	if (collect) pacer_data.push([timestamp, theta]);
 
 	setPosOfPacer(pacer, track, theta);
+	if (settings['spoke']) setRotOfSpoke(spoke, theta);
 
 	window.requestAnimationFrame(step);
 }
@@ -106,6 +117,10 @@ function removeTrackAndPacer() {
 	container.parentElement.removeChild(container);
 	let pacer = document.getElementById('pacer');
 	pacer.parentElement.removeChild(pacer);
+	if (settings['spoke']) {
+		let spoke = document.getElementById('spoke');
+		spoke.parentElement.removeChild(spoke);
+	}
 }
 
 function coordinateDemo() {
@@ -143,6 +158,23 @@ function createPacer(pos) {
 	pacer.style.top = px(pos[1]);
 	document.body.appendChild(pacer);
 	return pacer;
+}
+
+function createSpoke(track, radians) {
+	let spoke = document.createElement('div');
+	spoke.id = 'spoke';
+	spoke.style.width = px(track.radius);
+	spoke.style.left = px(track.center[0]);
+	spoke.style.top = px(track.center[1]);
+	// So the div will rotate around the center position.
+	[ "transform-origin"
+	, "-webkit-transform-origin"
+	, "-moz-transform-origin"
+	, "-ms-transform-origin"].forEach(transform => {
+		spoke.style[transform] = "0 0";
+	});
+	document.body.appendChild(spoke);
+	return spoke;
 }
 
 function px(str) { return str + 'px'; }

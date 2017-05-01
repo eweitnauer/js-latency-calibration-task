@@ -16,17 +16,26 @@ div#track {
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
 	border-radius: 50%;
+  user-select: none;
 	-webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  user-select: none;
 }
 div.pacer {
 	position: absolute;
 	background-color: skyblue;
 	border-radius: 50%;
+  user-select: none;
 	-webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+}
+div#spoke {
+	position: absolute;
+	height: 1px;
+	background-color: black;
   user-select: none;
+	-webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
