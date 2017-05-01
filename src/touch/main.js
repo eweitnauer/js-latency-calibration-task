@@ -136,7 +136,6 @@ function coordinateDemo() {
 function initTrack() {
 	let track_div = document.getElementById('track');
 	let track_dims = track_div.getBoundingClientRect();
-	console.log('track dims', track_dims);
 	// The width of the track is a percentage of the page width. The height in the
 	// track_dims object will not accurately represent the height of the track.
 	track_div.style.height = px(track_dims.width);
