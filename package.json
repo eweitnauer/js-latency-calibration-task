@@ -7,7 +7,7 @@
   },
   "scripts": {
     "build-touch": "babel src/touch --out-file js-latency-estimation-touch.js --presets es2015",
-    "build-keyboard": "babel src/keyboard --watch --out-file js-latency-estimation-keyboard.js --presets es2015",
+    "build-keyboard": "babel src/keyboard --out-file js-latency-estimation-keyboard.js --presets es2015",
     "build": "npm run build-touch && npm run build-keyboard"
   }
 }
