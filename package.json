@@ -6,6 +6,7 @@
     "babel-preset-es2015": "^6.9.0"
   },
   "scripts": {
-    "build": "babel src --out-file js-latency-estimation.js --presets es2015"
+    "build": "babel src --out-file js-latency-estimation.js --presets es2015",
+    "deploy": "rsync -r -a -v -e 'ssh' index.html js-latency-estimation.js css graspablemath.com:/srv/www/graspablemath.com/public_html/projects/js-latency"
   }
 }
