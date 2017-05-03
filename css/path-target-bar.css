@@ -1,0 +1,33 @@
+div#container {
+	margin-top: 200px;
+	margin-bottom: 100px;
+	width: 100%;
+	-webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+div#path {
+	max-width: 1000px;
+	width: 75%;
+	margin: auto;
+	height: 2px;
+	background-color: black;
+  user-select: none;
+	-webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+div.bar {
+	margin: 0;
+	padding: 0;
+	position: absolute;
+	background-color: grey;
+	box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+}
+div#target {
+	background: transparent;
+	border: skyblue 3px solid;
+}
