@@ -1,10 +1,10 @@
 let deltas = [];
 
-let settings = { 'bar-width': 4 // px
+let settings = { 'bar-width': 20// px
 	             , 'bar-height': 200 // px
-	             , 'target-x': 0.5 // % of path length
+	             , 'target-x': 0.5 // factor of path length
                , 'bar-speed': 0.25 // (path length)/sec
-               , 'bar-separation': 0.2 } // % of path length
+               , 'bar-separation': 0.75 } // in seconds
 
 let path, target;
 let bars = [];
@@ -19,24 +19,36 @@ let stop_animation = false;
 // so the animation starts correctly.
 let start_t;
 
+function onUserInput(time) {
+	let key_time = performance.now()/1000 - start_t; // convert performance time to sec
+	let closest_bar = getBarClosestToTarget(key_time);
+	deltas.push(closest_bar.dx);
+
+	// remove bar closest to target and all those to the right of that bar
+	let cutoff = bars.indexOf(closest_bar)+1
+	bars.slice(0, cutoff).forEach(bar => remove(bar.el));
+	bars = bars.slice(cutoff);
+}
+
 document.addEventListener('keydown', function(event) {
 	let key_time = performance.now()/1000 - start_t; // convert performance time to sec
+
 	if (event.keyCode === 32) {
 		event.preventDefault();
-
-		let closest_bar = getBarClosestToTarget(key_time);
-		deltas.push(closest_bar.dx);
-
-		// remove bar closest to target and all those to the right of that bar
-		let cutoff = bars.indexOf(closest_bar)+1
-		bars.slice(0, cutoff).forEach(bar => remove(bar.el));
-		bars = bars.slice(cutoff);
+		onUserInput(key_time);
 	}
+});
+
+document.addEventListener('mousedown', function(event) {
+	let click_time = performance.now()/1000 - start_t; // convert performance time to sec
+	if (!start_t) return;
+	event.preventDefault();
+	onUserInput(click_time);
 });
 
 function start() {
 	setTimeout(function() {	window.requestAnimationFrame(step); }, 1000);
-	setTimeout(stop, 12000);
+	setTimeout(stop, 30000);
 }
 
 // Function to pass as the callback to window.requestAnimationFrame.
@@ -52,7 +64,7 @@ function step(timestamp) {
 		bars.forEach((bar, idx) => {
 			let dt = now - bar.t0
 			  , x = settings['bar-speed']*dt;
-			if (x >= settings['bar-separation'] && idx === bars.length-1) addBar(path, now);
+			if (dt >= settings['bar-separation'] && idx === bars.length-1) addBar(path, bar.t0+settings['bar-separation']);
 			setPosOfBar(bar.el, getPosOnPath(path, x));
 		});
 	}
@@ -66,7 +78,9 @@ function stop() {
 	let sum = deltas.reduce(function(a, b) { return a+b })
 	  , avg = sum/deltas.length;
 	displayValue('avg. dist to target (% of path length)', avg);
-	displayValue('lag (ms)', avg/settings['bar-speed']*1000)
+	displayValue('lag (ms)', avg/settings['bar-speed']*1000);
+
+	plotSets({ type: 'keypress', data: deltas.map((d,i) => [i, d/settings['bar-speed']*1000]) });
 }
 
 // Sets the distance to the target position on the closest bar.
@@ -85,16 +99,17 @@ function getBarClosestToTarget(t) {
 }
 
 function addBar(path, t0) {
-	bars.push({el: setPosOfBar(createBar(path), getPosOnPath(path, 0)), t0});
+	bars.push({el: setPosOfBar(createBar(path, target), getPosOnPath(path, 0)), t0});
 }
 
-function createBar(path) {
+function createBar(path, before_el) {
 	let bar = document.createElement('div');
 	bar.className = 'bar';
 	bar.style.width = px(settings['bar-width']);
 	bar.style.height = px(settings['bar-height']);
 	bar.style.top = px(path.top - settings['bar-height']/2);
-	document.body.appendChild(bar);
+	if (before_el) document.body.insertBefore(bar, before_el);
+	else document.body.appendChild(bar);
 	return bar;
 }
 
@@ -114,7 +129,7 @@ function createTarget(path) {
 }
 
 function remove(el) {
-	el.parentElement.removeChild(el);
+	if (el.parentElement) el.parentElement.removeChild(el);
 }
 
 function removeAll() {

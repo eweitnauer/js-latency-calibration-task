@@ -4,7 +4,7 @@ let mouse_data = []
 
 let settings = { 'border-w': 1
                , 'spoke': true
-               , 'pacer-r': 40
+               , 'pacer-r': 30
                , 'rot-per-sec': 0.25 };
 
 let track, pacer, spoke;

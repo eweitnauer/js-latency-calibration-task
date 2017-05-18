@@ -19,16 +19,15 @@ div#path {
   -ms-user-select: none;
 }
 div.bar {
+	margin: 0;
+	padding: 0;
 	position: absolute;
-	border-width: 2px;
-	border-style: solid;
-	border-color: black;
 	background-color: grey;
 	box-sizing: border-box;
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
 }
 div#target {
-	background-color: white;
-	border-color: skyblue;
+	background: transparent;
+	border: skyblue 3px solid;
 }
