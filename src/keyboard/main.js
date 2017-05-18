@@ -52,7 +52,10 @@ function start() {
 }
 
 // Function to pass as the callback to window.requestAnimationFrame.
-function step(timestamp) {
+function step() {
+	// Get the timestamp when the animation callback fires. Don't use the timestamp
+	// parameter, which is a different value across browsers.
+	let timestamp = performance.now();
 	if (stop_animation) return;
 	let seconds_elapsed = timestamp/1000;
 	if (!start_t) start_t = seconds_elapsed;

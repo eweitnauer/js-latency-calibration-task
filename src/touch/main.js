@@ -96,7 +96,8 @@ function getRadialPos(center, radius, radians) {
 // so the pacer does not jump when the animation starts.
 let start_t, theta;
 // Function to pass as the callback to window.requestAnimationFrame.
-function step(timestamp) {
+function step() {
+	let timestamp = performance.now();
 	if (stop_animation) return;
 	let seconds_elapsed = timestamp/1000;
 	if (!start_t) start_t = seconds_elapsed;
