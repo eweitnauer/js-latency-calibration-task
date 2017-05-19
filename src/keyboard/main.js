@@ -1,16 +1,19 @@
 let deltas = [];
 
-let settings = { 'bar-width': 20// px
-	             , 'bar-height': 200 // px
+let settings = { 'bar-width': 50// px
+	             , 'bar-height': 50 // px
 	             , 'target-x': 0.5 // factor of path length
-               , 'bar-speed': 0.25 // (path length)/sec
-               , 'bar-separation': 0.75 } // in seconds
+	             , 'step-dist': 0.1 // factor of path length
+               , 'bar-speed': 3 // steps/sec
+               /*, 'bar-separation': 0.1*/ } // factor of path length
 
 let path, target;
-let bars = [];
+let troughs = []
+  , bars = [];
 window.onload = function() {
 	path = document.getElementById('path').getBoundingClientRect();
 	target = createTarget(path);
+	createTroughs(path);
 }
 
 let stop_animation = false;
@@ -66,8 +69,8 @@ function step() {
 	} else {
 		bars.forEach((bar, idx) => {
 			let dt = now - bar.t0
-			  , x = settings['bar-speed']*dt;
-			if (dt >= settings['bar-separation'] && idx === bars.length-1) addBar(path, bar.t0+settings['bar-separation']);
+			  , x = settings['step-dist'] * /*Math.floor(*/settings['bar-speed']*dt/*)*/;
+			if (x >= settings['step-dist'] && idx === bars.length-1) addBar(path, bar.t0+settings['step-dist']/settings['bar-speed']);
 			setPosOfBar(bar.el, getPosOnPath(path, x));
 		});
 	}
@@ -91,7 +94,7 @@ function getBarClosestToTarget(t) {
 	let closest_bar;
 	bars.forEach(bar => {
 		let dt = t - bar.t0 // lifetime of bar at time t
-		  , x = (settings['bar-speed']*dt) // where the bar should be positioned at time t
+		  , x = (/*settings['step-dist']**/settings['bar-speed']*dt) // where the bar should be positioned at time t
 		  , dx = x - settings['target-x']; // distance to target position
 		if (!closest_bar || Math.abs(dx) < Math.abs(closest_bar.dx)) {
 			bar.dx = dx;
@@ -131,12 +134,21 @@ function createTarget(path) {
 	return target;
 }
 
+function createTroughs(path) {
+	[0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 1].forEach((x) => {
+		let trough = setPosOfBar(createBar(path), getPosOnPath(path, x));
+		trough.classList.add('trough');
+		troughs.push(trough);
+	});
+}
+
 function remove(el) {
 	if (el.parentElement) el.parentElement.removeChild(el);
 }
 
 function removeAll() {
 	bars.forEach(bar => remove(bar.el));
+	troughs.forEach(trough => remove(trough));
 	remove(target);
 	remove(document.getElementById('container'));
 }

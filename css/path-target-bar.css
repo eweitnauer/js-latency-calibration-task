@@ -22,7 +22,7 @@ div.bar {
 	margin: 0;
 	padding: 0;
 	position: absolute;
-	background-color: grey;
+	background-color: black;
 	box-sizing: border-box;
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
@@ -30,4 +30,8 @@ div.bar {
 div#target {
 	background: transparent;
 	border: skyblue 3px solid;
+}
+div.trough {
+	background: transparent;
+	border: black 3px solid;
 }
