@@ -17,19 +17,23 @@ let stop_animation = false;
 // Subtract the timestamp recorded in the first call to "step" from all animation
 // timestamps so the animation starts correctly.
 let start_t;
-// Record the last timestamp when the animation callback was fired. Use this
-// for comparison with the keypress time.
+
+// The timestamp when the target was highlighted.
 let last_cb_t;
+// The timestamp when the key was pressed;
+let kp_t;
 
 function onUserInput(time) {
-	// Restart the highlight sequence.
-	setBarTimeOrigin(time);
-	// We are assuming that the user is inputting at the exact time the target
-	// would have been highlighted. If the time difference between the key press
-	// and the last animation callback is so great that it exceeds the duration
-	// of the step interval, does it make sense to have that data point
-	// contribute to the lag calculation (i.e. consider it a mistake)?
-	if (Math.abs(time - last_cb_t) <= settings['step-t']) {
+	if (time < bars[settings['steps-to-target']].t) {
+		// If the target has not been highlighted yet, store the keypress time so we
+		// can determine the time difference when the target is highlighted. (The user
+		// pressed too early).
+		kp_t = time;
+	} else {
+		// The user pressed too late.
+		kp_t = false;
+		// Restart the highlight sequence.
+		setBarTimeOrigin(time);
 		deltas.push(time - last_cb_t);
 	}
 }
@@ -53,7 +57,7 @@ document.addEventListener('mousedown', function(event) {
 
 function start() {
 	setTimeout(function() {	window.requestAnimationFrame(step); }, 1000);
-	setTimeout(stop, 50000);
+	setTimeout(stop, 30000/*50000*/);
 }
 
 // Function to pass as the callback to window.requestAnimationFrame.
@@ -64,30 +68,47 @@ function step() {
 	// parameter, which may have a different definition across browsers.
 	let animation_cb_t = performance.now();
 	if (!start_t) start_t = animation_cb_t;
-	last_cb_t = animation_cb_t - start_t;
+	animation_cb_t -= start_t;
 
 	// If the step interval occurs during this animation frame, but after the cb,
 	// act as if the step interval has happened.
 	// If the timeline is `aF --> cb --> step --> aF`, then acting as if the step
 	// has already occured will result in the bar being highlighted closer to the
 	// step interval rather than waiting for another whole animation frame.
-	let now = last_cb_t + settings['avg-frame-dur'];
+	let now = animation_cb_t + settings['avg-frame-dur'];
 
 	bars.forEach((bar, idx) => {
 		if (now >= bar.t) {
 			// highlight
 			fillBar(bar.el, true);
-			// The target is another element on top of the "bars," so we need to
-			// change its background, too.
-			if (idx === settings['steps-to-target']) fillBar(target, true);
+			if (idx === settings['steps-to-target'] && !bar.on) {
+				if (kp_t) {
+					// The spacebar has already been pressed. Now we know when the target
+					// would have been highlighted.
+					deltas.push(kp_t - animation_cb_t);
+					kp_t = false;
+					setBarTimeOrigin(animation_cb_t);
+				} else {
+					last_cb_t = animation_cb_t;
+					// The target is another element on top of the "bars," so we need to
+					// change its background, too.
+					fillBar(target, true);
+				}
+			}
+			// Prevent the last_cb_t from updating every time the target time has been
+			// exceeded in the animation frame loop.
+			bar.on = true;
 		} else {
 			// When the time origin of the bars is increased, this will unhighlight them.
+			bar.on = false;
 			fillBar(bar.el, false);
 			if (idx === settings['steps-to-target']) fillBar(target, false);
 		}
 	});
 
-	// Wait one step interval before restarting the highlighting sequence.
+	// Wait one step interval before restarting the highlighting sequence. This
+	// only occurs if the user never pressed the key and all bars have been
+	// highlighted, so we start the sequence over.
 	if (now > bars[bars.length-1].t + settings['step-t']) setBarTimeOrigin(now);
 
 	window.requestAnimationFrame(step);
@@ -98,7 +119,6 @@ function stop() {
 	removeAll();
 	let sum = deltas.reduce(function(a, b) { return a+b })
 	  , avg = sum/deltas.length;
-	// displayValue('avg. dist to target (% of path length)', avg);
 	displayValue('lag (ms)', avg);
 
 	plotSets({ type: 'keypress', data: deltas.map((d,i) => [i, d]) });
@@ -131,7 +151,7 @@ function createBars(path) {
 	[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].forEach((x, idx) => {
 		let bar = setPosOfBar(createBar(path), getPosOnPath(path, x));
 		bar.classList.add('trough');
-		bars.push({el: bar, t: idx*settings['step-t']});
+		bars.push({el: bar, t: idx*settings['step-t'], on: false});
 	});
 	return bars;
 }
