@@ -57,7 +57,7 @@ document.addEventListener('mousedown', function(event) {
 
 function start() {
 	setTimeout(function() {	window.requestAnimationFrame(step); }, 1000);
-	setTimeout(stop, 30000/*50000*/);
+	setTimeout(stop, 50000);
 }
 
 // Function to pass as the callback to window.requestAnimationFrame.
