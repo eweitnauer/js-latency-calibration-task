@@ -7,8 +7,9 @@
   },
   "scripts": {
     "build-touch": "babel src/touch --out-file lib/js-latency-estimation-touch.js --presets es2015",
-    "build-keyboard": "babel src/keyboard --out-file lib/js-latency-estimation-keyboard.js --presets es2015",
-    "build": "npm run build-touch && npm run build-keyboard",
-    "deploy": "rsync -r -a -v -e 'ssh' keyboard.html touch.html lib css graspablemath.com:/srv/www/graspablemath.com/public_html/projects/js-latency"
+    "build-keyboard-c": "babel src/keyboard-continuous --out-file lib/js-latency-estimation-keyboard-c.js --presets es2015",
+    "build-keyboard-d": "babel src/keyboard-discrete --out-file lib/js-latency-estimation-keyboard-d.js --presets es2015",
+    "build": "npm run build-touch && npm run build-keyboard-c && npm run build-keyboard-d",
+    "deploy": "rsync -r -a -v -e 'ssh' keyboard-c.html keyboard-d.html touch.html lib css graspablemath.com:/srv/www/graspablemath.com/public_html/projects/js-latency"
   }
 }

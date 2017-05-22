@@ -31,3 +31,7 @@ div#target {
 	background: transparent;
 	border: skyblue 3px solid;
 }
+div.trough {
+	background: white;
+	border: black 3px solid;
+}

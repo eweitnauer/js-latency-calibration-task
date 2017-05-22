@@ -1,5 +1,4 @@
 node_modules
-js-latency-estimation-touch.js
-js-latency-estimation-keyboard.js
+lib/
 .DS_Store
 src/.DS_Store
