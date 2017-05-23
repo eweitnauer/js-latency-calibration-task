@@ -2,8 +2,10 @@ let deltas = [];
 
 let settings = { 'bar-width': 50 // px
 	             , 'bar-height': 50 // px
-	             , 'avg-frame-dur': 16.7 // ms
-               , 'step-t': 300 // ms between each highlight
+	             , 'bar-count': 8
+	             , 'total-duration': 30000 // ms
+	             , 'avg-frame-dur': 16.67 // ms
+               , 'step-t': 16.67*8 // ms between each highlight
                , 'steps-to-target': 5 }; // # of time intervals until target is highlighted
 
 let path, bars, target;
@@ -20,7 +22,7 @@ let start_t;
 
 // The timestamp when the target was highlighted.
 let last_cb_t;
-// The timestamp when the key was pressed;
+// The timestamp when the key was pressed.
 let kp_t;
 
 function onUserInput(time) {
@@ -28,13 +30,15 @@ function onUserInput(time) {
 		// If the target has not been highlighted yet, store the keypress time so we
 		// can determine the time difference when the target is highlighted. (The user
 		// pressed too early).
-		kp_t = time;
+		if (time > bars[settings['steps-to-target']].t - 2*settings['step-t']) {
+			kp_t = time;
+		}
 	} else {
 		// The user pressed too late.
 		kp_t = false;
 		// Restart the highlight sequence.
 		setBarTimeOrigin(time);
-		deltas.push(time - last_cb_t);
+		deltas.push(time === bars[settings['steps-to-target']].t ? 0 : time - last_cb_t);
 	}
 }
 
@@ -57,7 +61,7 @@ document.addEventListener('mousedown', function(event) {
 
 function start() {
 	setTimeout(function() {	window.requestAnimationFrame(step); }, 1000);
-	setTimeout(stop, 50000);
+	setTimeout(stop, settings['total-duration']);
 }
 
 // Function to pass as the callback to window.requestAnimationFrame.
@@ -70,18 +74,12 @@ function step() {
 	if (!start_t) start_t = animation_cb_t;
 	animation_cb_t -= start_t;
 
-	// If the step interval occurs during this animation frame, but after the cb,
-	// act as if the step interval has happened.
-	// If the timeline is `aF --> cb --> step --> aF`, then acting as if the step
-	// has already occured will result in the bar being highlighted closer to the
-	// step interval rather than waiting for another whole animation frame.
-	let now = animation_cb_t + settings['avg-frame-dur'];
-
 	bars.forEach((bar, idx) => {
-		if (now >= bar.t) {
+		if (animation_cb_t >= bar.t) {
 			// highlight
 			fillBar(bar.el, true);
 			if (idx === settings['steps-to-target'] && !bar.on) {
+				// This is the target bar.
 				if (kp_t) {
 					// The spacebar has already been pressed. Now we know when the target
 					// would have been highlighted.
@@ -109,7 +107,10 @@ function step() {
 	// Wait one step interval before restarting the highlighting sequence. This
 	// only occurs if the user never pressed the key and all bars have been
 	// highlighted, so we start the sequence over.
-	if (now > bars[bars.length-1].t + settings['step-t']) setBarTimeOrigin(now);
+	if (animation_cb_t > bars[bars.length-1].t + settings['step-t']) {
+		kp_t = false;
+		setBarTimeOrigin(now);
+	}
 
 	window.requestAnimationFrame(step);
 }
@@ -117,11 +118,13 @@ function step() {
 function stop() {
 	stop_animation = true;
 	removeAll();
-	let sum = deltas.reduce(function(a, b) { return a+b })
-	  , avg = sum/deltas.length;
+	let cut = deltas.slice(2).filter(n => n <= settings['step-t']);
+	console.log('cut length', cut.length);
+	let sum = cut.reduce(function(a, b) { return a+b })
+	  , avg = sum/cut.length;
 	displayValue('lag (ms)', avg);
 
-	plotSets({ type: 'keypress', data: deltas.map((d,i) => [i, d]) });
+	plotSets({ type: 'keypress', data: cut.map((d,i) => [i, d]) });
 }
 
 function createBar(path, before_el) {
@@ -148,17 +151,17 @@ function getPosOnPath(path, percent) {
 // performance timestamp at which they should be highlighted.
 function createBars(path) {
 	let bars = [];
-	[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].forEach((x, idx) => {
+	for (let i=0; i<settings['bar-count']; i++) bars.push(i/(settings['bar-count']-1));
+	return bars.map((x, idx) => {
 		let bar = setPosOfBar(createBar(path), getPosOnPath(path, x));
 		bar.classList.add('trough');
-		bars.push({el: bar, t: idx*settings['step-t'], on: false});
+		return {el: bar, t: idx*settings['step-t'], on: false};
 	});
-	return bars;
 }
 
 // Should be placed on top of the "bars" layer.
 function createTarget(path) {
-	let target = setPosOfBar(createBar(path), getPosOnPath(path, settings['steps-to-target']*0.1)); // convert to factor of path length
+	let target = setPosOfBar(createBar(path), getPosOnPath(path, settings['steps-to-target']/(settings['bar-count']-1))); // convert to factor of path length
 	target.id = 'target';
 	return target;
 }
